@@ -7,7 +7,8 @@
 * rename it log.csv
 * open the project folder in the terminal
 * install with 'npm install'
-* run with 'npm run start'
+* if using for the first time or after an update, run 'npm run r'
+* then to get the results, run 'npm run a'
 
 ### Features so far
 Automatically analyzes log files for:
