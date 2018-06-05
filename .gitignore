@@ -1,3 +1,6 @@
 log.csv
+types.json
+files.json
+notFoundPages.json
 
 node_modules/
