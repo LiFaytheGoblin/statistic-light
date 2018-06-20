@@ -13,6 +13,9 @@ function getRealPageClicksByFileType() {
   //will be filled with files later on
   const files = {}
 
+  //logs that are not made by bots, only valid types
+  const cleanLogs = []
+
   //Reg exs for errors
   const statusOk = new RegExp(/\s(200)\s/)
   const isAGet = new RegExp(/GET\s/)
@@ -36,17 +39,23 @@ function getRealPageClicksByFileType() {
 
     const clickedBy = getClickCategory(entry) //handle counters that need to be added to depending on bots
     const successfull = statusOk.test(entry) //check if http request to that file was successfull
-    if (successfull) { //if file was found and no 404 or 401 error
-      addUp(types, currentFileType, clickedBy) //add page type to types (or add up if already there)
-      addUp(files, currentFileName, clickedBy) //add page name to names (or add up if already there)
-    } else addUp(notFoundPages, currentFileName, clickedBy) //else add to errorPages
+    if (successfull) { //if file was found and no 404 or 401 error THIS SEEMS TO BE BROKEN
+      // addUp(types, currentFileType, clickedBy) //add page type to types (or add up if already there)
+      // addUp(files, currentFileName, clickedBy) //add page name to names (or add up if already there)
+      if (clickedBy === 'real' && getRelevantTypes().includes(currentFileType)) {
+        cleanLogs.push(entry) //ADD TO CLEAN LOG (without bots, just relevant pages, for grep)
+      }
+    }
+    // else addUp(notFoundPages, currentFileName, clickedBy) //else add to errorPages
     //Output for user
     console.log(`Finished analyzing file ${all.length}: ${currentFileName}`)
   }).on('done', () => {
-    console.log(`Registred ${all.length} files.`)//Output for user
-    fs.writeFile("types.json", JSON.stringify(types))
-    fs.writeFile("files.json", JSON.stringify(files))
-    fs.writeFile("notFoundPages.json", JSON.stringify(notFoundPages))
+    console.log(`Registred ${all.length} files. Found ${cleanLogs.length} potentially real clicks.`)//Output for user
+    const csvContent = cleanLogs.join("\r\n")
+    fs.writeFile("cleanLogs.csv", csvContent)
+    // fs.writeFile("types.json", JSON.stringify(types))
+    // fs.writeFile("files.json", JSON.stringify(files))
+    // fs.writeFile("notFoundPages.json", JSON.stringify(notFoundPages))
   }).on('error', (err) => {
     console.error(err)
   })
@@ -85,7 +94,7 @@ function getFileType(fileName) {
 }
 
 function getClickCategory(entry) {
-  const bot = new RegExp(/.*((B|b)ot|(S|s)pider|BUbiNG|(C|c)rawler|LinkCheck|monitor)/);
+  const bot = new RegExp(/.*((B|b)ot|(S|s)pider|BUbiNG|(C|c)rawler|LinkCheck|monitor|naver|Apache)/);
   const wasBot = bot.test(entry) //check if was a bot
   return (wasBot) ? 'bot' : 'real' //find out if the counter needs to go up for all clicks or just real clicks
 }

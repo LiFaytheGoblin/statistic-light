@@ -1,6 +1,8 @@
 log.csv
+cleanLogs.csv
 types.json
 files.json
 notFoundPages.json
 
+ip-logs/
 node_modules/

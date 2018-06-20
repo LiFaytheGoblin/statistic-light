@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "test",
-    "r": "node sort.js",
-    "a": "node analyze.js"
+    "clean": "node sort.js",
+    "analyze": "node analyze.js"
   },
   "repository": {
     "type": "git",
