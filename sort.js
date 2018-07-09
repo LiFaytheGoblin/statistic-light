@@ -7,6 +7,8 @@ getRealPageClicksByFileType();
 function getRealPageClicksByFileType() {
   let all = []
 
+  let logsByIp = {}
+
   //an object for all the relevant types with counters
   const types = {}
 
@@ -28,7 +30,7 @@ function getRealPageClicksByFileType() {
   }).fromFile(csvFilePath).on('data', (data) => { //each line
     const entry = data.toString('utf8') //data is a buffer so convert buffer to string
 
-    if (!isAGet.test(entry)) return //if this was not a get don't continue
+    // if (!isAGet.test(entry)) return //if this was not a get don't continue
 
     all.push(entry) //logs all the entries in an array
 
@@ -36,29 +38,55 @@ function getRealPageClicksByFileType() {
     if (!currentFilePath) return //if neither index page nor another known file type don't handle this entry)
     const currentFileName = getFileName(currentFilePath) //get name of file from file path
     const currentFileType = getFileType(currentFileName) //get type of file from file name
-
+    if(!currentFileType) return
+    //
     const clickedBy = getClickCategory(entry) //handle counters that need to be added to depending on bots
     const successfull = statusOk.test(entry) //check if http request to that file was successfull
     if (successfull) { //if file was found and no 404 or 401 error THIS SEEMS TO BE BROKEN
       // addUp(types, currentFileType, clickedBy) //add page type to types (or add up if already there)
       // addUp(files, currentFileName, clickedBy) //add page name to names (or add up if already there)
       if (clickedBy === 'real' && getRelevantTypes().includes(currentFileType)) {
-        cleanLogs.push(entry) //ADD TO CLEAN LOG (without bots, just relevant pages, for grep)
+        // cleanLogs.push(entry) //ADD TO CLEAN LOG (without bots, just relevant pages, for grep)
+        let currentIp = getIp(entry)
+        let allIps = Object.keys(logsByIp)
+        // console.log(allIps)
+        // if(!allIps.includes(currentIp)) {
+        if(!allIps.includes(currentIp)) {
+          logsByIp[currentIp] = []
+          console.log(`new Ip ${currentIp}`)
+        } else {
+          // console.log(`known Ip ${currentIp}, part of ${allIps.join(", ")}`)
+        }
+        logsByIp[currentIp].push(entry)
+        // console.log('pushed ' + currentIp + " into " + allIps.join(", ") + ", occurance: ", logsByIp[currentIp].length)
       }
     }
+    return
     // else addUp(notFoundPages, currentFileName, clickedBy) //else add to errorPages
-    //Output for user
-    console.log(`Finished analyzing file ${all.length}: ${currentFileName}`)
+    // Output for user
+    console.log(`Finished analyzing file ${all.length}: ${currentFileName}, ${successfull}`)
   }).on('done', () => {
-    console.log(`Registred ${all.length} files. Found ${cleanLogs.length} potentially real clicks.`)//Output for user
-    const csvContent = cleanLogs.join("\r\n")
-    fs.writeFile("cleanLogs.csv", csvContent)
+    // console.log(`Registred ${all.length} files. Found ${cleanLogs.length} potentially real clicks.`)//Output for user
+    // const csvContent = cleanLogs.join("\r\n")
+    // fs.writeFile("cleanLogs.csv", csvContent)
     // fs.writeFile("types.json", JSON.stringify(types))
     // fs.writeFile("files.json", JSON.stringify(files))
     // fs.writeFile("notFoundPages.json", JSON.stringify(notFoundPages))
+    // console.log(allIps, allIps.length)
+    console.log(logsByIp, logsByIp.length)
+    fs.writeFile("logsByIp.json", JSON.stringify(logsByIp))
+    console.log('all done')
   }).on('error', (err) => {
     console.error(err)
   })
+}
+
+function getIp(entry) {
+  const ipRegExp = /\b[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/
+  const ip = ipRegExp.exec(entry)
+  if (!ip) throw new Error('No Ip found for entry ' + entry)
+  // console.log(ip)
+  return ip[0]
 }
 
 function getAvailableTypes() {
@@ -94,7 +122,7 @@ function getFileType(fileName) {
 }
 
 function getClickCategory(entry) {
-  const bot = new RegExp(/.*((B|b)ot|(S|s)pider|BUbiNG|(C|c)rawler|LinkCheck|monitor|naver|Apache)/);
+  const bot = new RegExp(/.*((B|b)ot|(S|s)pider|BUbiNG|(C|c)rawler|LinkCheck|monitor|naver)/);
   const wasBot = bot.test(entry) //check if was a bot
   return (wasBot) ? 'bot' : 'real' //find out if the counter needs to go up for all clicks or just real clicks
 }
